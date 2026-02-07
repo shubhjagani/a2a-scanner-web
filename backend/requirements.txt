@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+requests
+python-dotenv
+openai
+git+https://github.com/cisco-ai-defense/a2a-scanner.git
