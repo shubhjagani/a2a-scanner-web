@@ -1,6 +1,13 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@theme {
+  --color-cyber-black: #0a0a0a;
+  --color-cyber-gray: #1a1a1a;
+  --color-cyber-green: #00ff41;
+  --color-cyber-green-dim: rgba(0, 255, 65, 0.1);
+  --color-cyber-red: #ff003c;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
 
 @layer base {
   body {

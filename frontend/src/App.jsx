@@ -43,14 +43,14 @@ export default function App() {
     setResult(null)
     setError(null)
 
-    const endpoint = activeTab === 'card' ? '/api/scan/card' : '/api/scan/endpoint'
+    const endpoint = activeTab === 'card' ? '/scan/card' : '/scan/endpoint'
     
     // Determine if input is JSON or URL
     let payload = {}
     if (activeTab === 'card') {
         try {
-            JSON.parse(input)
-            payload = { json_content: input }
+            const parsedJson = JSON.parse(input)
+            payload = { json_payload: parsedJson }
         } catch {
             payload = { url: input }
         }

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Body
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
 import os
 from dotenv import load_dotenv
@@ -14,6 +15,15 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = FastAPI(title="A2A Security Scanner")
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for dev
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Config
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -74,6 +84,16 @@ async def scan_card(request: ScanRequest = Body(...)):
             if "exec" in perms or "shell" in perms:
                  risks.append({"severity": "critical", "message": "Agent requests shell execution permissions."})
                  score -= 50
+        
+        # Check for capability_abuse (classic A2A pattern)
+        if "capabilities" in agent_card:
+            for cap in agent_card["capabilities"]:
+                if cap.get("type") in ["execute", "exec", "shell", "admin", "system"]:
+                    risks.append({"severity": "critical", "message": f"Dangerous capability type detected: {cap.get('type')}"})
+                    score -= 50
+                if "arbitrary code" in cap.get("description", "").lower():
+                    risks.append({"severity": "critical", "message": "Capability description implies arbitrary code execution."})
+                    score -= 30
         
         # Check for exposed endpoints
         if "endpoints" in agent_card:
