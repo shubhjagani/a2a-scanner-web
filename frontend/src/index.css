@@ -1,21 +1,21 @@
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  --color-cyber-black: #0a0a0a;
+  --color-cyber-gray: #1a1a1a;
+  --color-cyber-green: #00ff41;
+  --color-cyber-green-dim: rgba(0, 255, 65, 0.1);
+  --color-cyber-red: #ff003c;
+  
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
 
 @layer base {
   body {
     @apply bg-cyber-black text-gray-300 font-sans antialiased;
   }
-}
-
-.font-sans {
-  font-family: 'Inter', sans-serif;
-}
-
-.font-mono {
-  font-family: 'JetBrains Mono', monospace;
 }
 
 .cyber-border {
