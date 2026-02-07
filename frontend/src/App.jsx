@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Shield, Search, AlertTriangle, CheckCircle, Terminal, FileJson, Activity, Upload, Info, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Shield, Search, AlertTriangle, CheckCircle, Terminal, FileJson, Activity, Upload, Info, ChevronDown, ChevronUp, History, Clock } from 'lucide-react'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -10,19 +10,19 @@ function cn(...inputs) {
 const InfoCard = ({ title, children }) => {
   const [isOpen, setIsOpen] = useState(false)
   return (
-    <div className="bg-cyber-gray border border-gray-800 rounded-lg p-4 mb-4">
+    <div className="bg-cyber-gray border border-gray-800 rounded-lg p-4 mb-4 shadow-sm">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between text-left"
+        className="w-full flex items-center justify-between text-left group"
       >
-        <span className="flex items-center gap-2 font-bold text-gray-300">
+        <span className="flex items-center gap-2 font-semibold text-gray-300 group-hover:text-white transition-colors text-sm">
           <Info className="w-4 h-4 text-cyber-green" />
           {title}
         </span>
-        {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        {isOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
       </button>
       {isOpen && (
-        <div className="mt-3 text-sm text-gray-400 space-y-2 border-t border-gray-800 pt-3">
+        <div className="mt-3 text-sm text-gray-400 space-y-2 border-t border-gray-800 pt-3 leading-relaxed">
           {children}
         </div>
       )}
@@ -30,27 +30,91 @@ const InfoCard = ({ title, children }) => {
   )
 }
 
+const HistoryList = ({ refreshTrigger }) => {
+    const [history, setHistory] = useState([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        fetchHistory()
+    }, [refreshTrigger])
+
+    const fetchHistory = async () => {
+        try {
+            // Check if backend history endpoint is available
+            const res = await fetch('http://localhost:8000/api/history').catch(() => null)
+            if (res && res.ok) {
+                const data = await res.json()
+                setHistory(data)
+            } else {
+                // Mock history if backend unavailable
+                setHistory([
+                    { id: 1, target: 'https://evil-agent.com/card.json', score: 25, status: 'CRITICAL', timestamp: new Date().toISOString() },
+                    { id: 2, target: 'https://good-agent.ai/v1', score: 98, status: 'SAFE', timestamp: new Date(Date.now() - 3600000).toISOString() }
+                ])
+            }
+        } catch (e) {
+            console.warn("History fetch failed", e)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    if (loading) return <div className="text-xs text-gray-600 animate-pulse">Loading history...</div>
+
+    return (
+        <div className="space-y-2">
+            {history.map((scan) => (
+                <div key={scan.id} className="flex items-center justify-between p-3 bg-gray-900/50 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                        <div className={cn("w-2 h-2 rounded-full shrink-0", 
+                            scan.score > 80 ? "bg-cyber-green" : scan.score > 50 ? "bg-yellow-500" : "bg-cyber-red"
+                        )} />
+                        <span className="text-xs font-mono text-gray-400 truncate max-w-[150px] md:max-w-[200px]" title={scan.target}>
+                            {scan.target}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0">
+                         <span className="text-[10px] text-gray-600 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(scan.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded",
+                             scan.score > 80 ? "bg-green-900/20 text-green-400" : 
+                             scan.score > 50 ? "bg-yellow-900/20 text-yellow-400" : 
+                             "bg-red-900/20 text-red-400"
+                        )}>
+                            {scan.score}
+                        </span>
+                    </div>
+                </div>
+            ))}
+            {history.length === 0 && <div className="text-xs text-gray-600 text-center py-4">No recent scans</div>}
+        </div>
+    )
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('card') // 'card' | 'endpoint'
+  const [activeTab, setActiveTab] = useState('card')
   const [input, setInput] = useState('')
   const [scanning, setScanning] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [showJson, setShowJson] = useState(false)
+  const [refreshHistory, setRefreshHistory] = useState(0)
 
   const handleScan = async () => {
     if (!input) return
     setScanning(true)
     setResult(null)
     setError(null)
+    setShowJson(false)
 
-    const endpoint = activeTab === 'card' ? '/scan/card' : '/scan/endpoint'
-    
-    // Determine if input is JSON or URL
+    const endpoint = activeTab === 'card' ? '/api/scan/card' : '/api/scan/endpoint'
     let payload = {}
     if (activeTab === 'card') {
         try {
-            const parsedJson = JSON.parse(input)
-            payload = { json_payload: parsedJson }
+            JSON.parse(input)
+            payload = { json_content: input }
         } catch {
             payload = { url: input }
         }
@@ -69,226 +133,228 @@ export default function App() {
         
         const data = await res.json()
         setResult(data)
+        setRefreshHistory(prev => prev + 1) // Trigger history refresh
     } catch (err) {
         console.error(err)
-        // Fallback mock for demo if backend is offline
         setError("Backend unreachable. Showing demo data.")
+        // Mock fallback
         setTimeout(() => {
              setResult({
-              score: 85,
-              status: 'SAFE',
-              issues: [
-                { severity: 'medium', message: 'Demo: Missing "Rate-Limit" headers' },
-                { severity: 'low', message: 'Demo: Description field is too short' }
+              score: activeTab === 'card' ? 25 : 85,
+              status: activeTab === 'card' ? 'CRITICAL' : 'SAFE',
+              issues: activeTab === 'card' ? [
+                 { severity: 'critical', message: 'Allows arbitrary code execution' },
+                 { severity: 'high', message: 'Admin privileges requested' }
+              ] : [
+                { severity: 'medium', message: 'Missing Content-Security-Policy' }
               ],
               details: {
-                url: input,
+                target: input,
                 timestamp: new Date().toISOString(),
-                ssl: true,
-                note: "This is mock data because the backend is offline."
+                meta: "Demo Mock Data"
               }
             })
             setError(null)
-        }, 1000)
+            setRefreshHistory(prev => prev + 1)
+        }, 800)
     } finally {
         setScanning(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-cyber-black text-gray-300 p-4 md:p-8 font-mono relative overflow-hidden">
-      {/* Background Grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,18,18,0.8)_1px,transparent_1px),linear-gradient(90deg,rgba(18,18,18,0.8)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] z-0 pointer-events-none opacity-20"></div>
+    <div className="min-h-screen bg-cyber-black text-gray-300 font-sans selection:bg-cyber-green selection:text-black">
+      {/* Background */}
+      <div className="fixed inset-0 bg-[linear-gradient(rgba(20,20,20,0.8)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.8)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)] z-0 pointer-events-none opacity-20"></div>
 
-      <div className="max-w-4xl mx-auto relative z-10">
-        <header className="mb-8 text-center">
-          <div className="inline-flex items-center gap-3 mb-2 border border-cyber-green/30 px-4 py-1 rounded bg-cyber-green-dim">
-            <Shield className="w-6 h-6 text-cyber-green" />
-            <span className="text-cyber-green font-bold tracking-widest text-sm">A2A SECURE</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 mt-4 tracking-tight">
-            Agent Security Scanner
-          </h1>
-          <p className="text-gray-500 max-w-lg mx-auto">
-            Static analysis & endpoint verification for AI Agents. 
-            Ensure your autonomous systems are secure.
-          </p>
-        </header>
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-12 relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Main Content */}
+        <div className="lg:col-span-8">
+            <header className="mb-10">
+                <div className="inline-flex items-center gap-3 mb-4 px-3 py-1 rounded-full bg-cyber-green/10 border border-cyber-green/20">
+                    <Shield className="w-4 h-4 text-cyber-green" />
+                    <span className="text-cyber-green font-bold tracking-widest text-xs">A2A SECURE</span>
+                </div>
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">
+                    Agent Security Scanner
+                </h1>
+                <p className="text-gray-400 text-lg max-w-xl leading-relaxed">
+                    Verify the safety of autonomous agents before deployment. <br/>
+                    Static analysis & endpoint verification.
+                </p>
+            </header>
 
-        {/* Tab Switcher */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-cyber-gray p-1 rounded-lg border border-gray-800 inline-flex">
-            <button 
-              onClick={() => { setActiveTab('card'); setInput(''); setResult(null); }}
-              className={cn(
-                "px-6 py-2 rounded flex items-center gap-2 transition-all",
-                activeTab === 'card' ? "bg-gray-800 text-white shadow-lg border border-gray-700" : "text-gray-500 hover:text-gray-300"
-              )}
-            >
-              <FileJson className="w-4 h-4" /> Agent Card
-            </button>
-            <button 
-              onClick={() => { setActiveTab('endpoint'); setInput(''); setResult(null); }}
-              className={cn(
-                "px-6 py-2 rounded flex items-center gap-2 transition-all",
-                activeTab === 'endpoint' ? "bg-gray-800 text-white shadow-lg border border-gray-700" : "text-gray-500 hover:text-gray-300"
-              )}
-            >
-              <Activity className="w-4 h-4" /> Live Endpoint
-            </button>
-          </div>
-        </div>
-
-        {/* Help / Context */}
-        <div className="mb-6">
-            {activeTab === 'card' ? (
-                <InfoCard title="How to use: Agent Card Scanner">
-                    <p><strong>What is it?</strong> Checks the manifest file (JSON) of an AI Agent for malicious instructions, prompt injection, or insecure configurations.</p>
-                    <p><strong>Input:</strong> Paste a URL to an <code>agent.json</code> file, or paste the raw JSON content directly.</p>
-                    <p><strong>Output:</strong> A Risk Score (0-100) and a list of detected vulnerabilities.</p>
-                </InfoCard>
-            ) : (
-                <InfoCard title="How to use: Live Endpoint Scanner">
-                    <p><strong>What is it?</strong> Pings a running Agent API to verify its network security posture.</p>
-                    <p><strong>Input:</strong> The base URL of the agent's API (e.g., <code>https://api.agent.ai/v1</code>).</p>
-                    <p><strong>Checks:</strong> HTTPS encryption, Security Headers (HSTS, X-Content-Type), and presence of a valid agent card.</p>
-                </InfoCard>
-            )}
-        </div>
-
-        {/* Input Area */}
-        <div className="bg-cyber-gray border border-gray-800 rounded-xl p-6 shadow-2xl mb-8">
-          <label className="block text-xs uppercase text-gray-500 mb-2 font-bold tracking-wider">
-            {activeTab === 'card' ? 'Agent Manifest (URL or JSON)' : 'Agent API Endpoint (URL)'}
-          </label>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <input 
-                type="text" 
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={activeTab === 'card' ? 'https://.../agent.json or {"name": "..."}' : 'https://api.agent.ai/v1'}
-                className="cyber-input pl-10 h-12 font-mono text-sm"
-              />
-              <Search className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" />
-            </div>
-            <button 
-              onClick={handleScan}
-              disabled={scanning || !input}
-              className={cn("cyber-button h-12 flex items-center justify-center gap-2 min-w-[140px]", scanning && "opacity-50 cursor-not-allowed")}
-            >
-              {scanning ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
-                  SCANNING
-                </>
-              ) : (
-                'SCAN TARGET'
-              )}
-            </button>
-          </div>
-          
-          {error && (
-            <div className="mt-4 p-3 bg-red-900/20 border border-red-500/50 rounded text-red-400 text-sm flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" />
-                {error}
-            </div>
-          )}
-        </div>
-
-        {/* Results Area */}
-        {result && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {/* Score Card */}
-                <div className="bg-cyber-gray border border-gray-800 rounded-xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50 pointer-events-none"></div>
-                    <span className="text-gray-500 text-xs uppercase tracking-wider mb-4 font-bold">Security Score</span>
-                    
-                    <div className="relative w-40 h-40 flex items-center justify-center">
-                        {/* Background Circle */}
-                        <svg className="w-full h-full transform -rotate-90">
-                            <circle cx="80" cy="80" r="70" stroke="#1a1a1a" strokeWidth="12" fill="none" />
-                            {/* Progress Circle */}
-                            <circle 
-                                cx="80" cy="80" r="70" 
-                                stroke={result.score > 80 ? "#00ff41" : result.score > 50 ? "#fbbf24" : "#ff003c"} 
-                                strokeWidth="12" 
-                                fill="none" 
-                                strokeDasharray="439.8" 
-                                strokeDashoffset={439.8 - (439.8 * result.score) / 100} 
-                                strokeLinecap="round"
-                                className="transition-all duration-1000 ease-out" 
-                            />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center flex-col">
-                            <span className={cn("text-5xl font-bold tracking-tighter", result.score > 80 ? "text-cyber-green" : result.score > 50 ? "text-yellow-400" : "text-cyber-red")}>
-                                {result.score}
-                            </span>
-                            <span className="text-xs text-gray-500 uppercase tracking-widest mt-1">/100</span>
-                        </div>
-                    </div>
-                    
-                    <span className={cn("mt-6 px-4 py-1.5 rounded text-xs font-bold uppercase tracking-widest border", 
-                        result.score > 80 ? "bg-green-900/20 border-green-500/30 text-green-400" : 
-                        result.score > 50 ? "bg-yellow-900/20 border-yellow-500/30 text-yellow-400" : 
-                        "bg-red-900/20 border-red-500/30 text-red-400"
-                    )}>
-                        {result.status}
-                    </span>
+            {/* Input Section */}
+            <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6 shadow-2xl mb-8">
+                
+                {/* Tabs */}
+                <div className="flex gap-6 mb-6 border-b border-gray-800 pb-1">
+                    <button 
+                        onClick={() => { setActiveTab('card'); setInput(''); setResult(null); }}
+                        className={cn("pb-3 text-sm font-medium transition-all relative", 
+                            activeTab === 'card' ? "text-white" : "text-gray-500 hover:text-gray-300"
+                        )}
+                    >
+                        Manifest Scanner
+                        {activeTab === 'card' && <span className="absolute bottom-[-5px] left-0 w-full h-0.5 bg-cyber-green rounded-full"></span>}
+                    </button>
+                    <button 
+                        onClick={() => { setActiveTab('endpoint'); setInput(''); setResult(null); }}
+                        className={cn("pb-3 text-sm font-medium transition-all relative", 
+                            activeTab === 'endpoint' ? "text-white" : "text-gray-500 hover:text-gray-300"
+                        )}
+                    >
+                        Endpoint Health
+                        {activeTab === 'endpoint' && <span className="absolute bottom-[-5px] left-0 w-full h-0.5 bg-cyber-green rounded-full"></span>}
+                    </button>
                 </div>
 
-                {/* Issues List */}
-                <div className="md:col-span-2 bg-cyber-gray border border-gray-800 rounded-xl p-6 relative">
-                    <h3 className="text-white font-bold mb-4 flex items-center gap-2 border-b border-gray-800 pb-4">
-                        <Terminal className="w-5 h-5 text-cyber-green" /> 
-                        Analysis Report
-                    </h3>
-                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                        {result.issues && result.issues.length > 0 ? (
-                            result.issues.map((issue, i) => (
-                                <div key={i} className="flex items-start gap-3 p-3 bg-black/40 rounded border border-gray-800/50 hover:border-gray-700 transition-colors">
-                                    {issue.severity === 'high' || issue.severity === 'critical' ? (
-                                        <AlertTriangle className="w-5 h-5 text-cyber-red shrink-0 mt-0.5" />
-                                    ) : issue.severity === 'medium' ? (
-                                        <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    ) : (
-                                        <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                    )}
-                                    <div>
-                                        <p className="text-sm text-gray-300 font-medium leading-snug">{issue.message}</p>
-                                        <span className={cn("text-[10px] uppercase font-bold tracking-wider mt-1 inline-block", 
-                                            (issue.severity === 'high' || issue.severity === 'critical') ? "text-cyber-red" : 
-                                            issue.severity === 'medium' ? "text-yellow-500" : "text-blue-400"
-                                        )}>
-                                            {issue.severity} Priority
-                                        </span>
+                <div className="flex flex-col gap-4">
+                    <div className="relative">
+                        <input 
+                            type="text" 
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleScan()}
+                            placeholder={activeTab === 'card' ? 'Paste Agent Manifest URL or JSON...' : 'Paste Agent API Endpoint URL...'}
+                            className="cyber-input pl-11 font-mono text-sm"
+                        />
+                        <Search className="absolute left-4 top-3.5 w-4 h-4 text-gray-500" />
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                         <span className="text-xs text-gray-500">
+                            {activeTab === 'card' ? 'Supports .json URLs or raw JSON text.' : 'Checks HTTPS, Headers, and Card availability.'}
+                         </span>
+                         <button 
+                            onClick={handleScan}
+                            disabled={scanning || !input}
+                            className={cn("cyber-button min-w-[140px] flex justify-center", scanning && "opacity-80 cursor-wait")}
+                        >
+                            {scanning ? <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin"/> : 'Start Scan'}
+                        </button>
+                    </div>
+                </div>
+
+                {error && (
+                    <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        {error}
+                    </div>
+                )}
+            </div>
+
+            {/* Results Section */}
+            {result && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                    
+                    {/* Score Header */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 flex items-center justify-between md:flex-col md:text-center md:justify-center relative overflow-hidden group">
+                             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                             
+                             <div className="relative z-10">
+                                <span className="text-gray-500 text-xs font-bold uppercase tracking-wider block mb-2">Trust Score</span>
+                                <span className={cn("text-6xl font-bold tracking-tighter", 
+                                    result.score > 80 ? "text-cyber-green" : result.score > 50 ? "text-yellow-400" : "text-cyber-red"
+                                )}>
+                                    {result.score}
+                                </span>
+                             </div>
+
+                             <div className="relative z-10 md:mt-4">
+                                <span className={cn("px-3 py-1 rounded text-xs font-bold uppercase tracking-widest border", 
+                                    result.score > 80 ? "bg-green-500/10 border-green-500/20 text-green-400" : 
+                                    result.score > 50 ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-400" : 
+                                    "bg-red-500/10 border-red-500/20 text-red-400"
+                                )}>
+                                    {result.status}
+                                </span>
+                             </div>
+                        </div>
+
+                        <div className="md:col-span-2 bg-gray-900/50 border border-gray-800 rounded-xl p-6">
+                            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                                <Terminal className="w-4 h-4 text-cyber-green" /> 
+                                Analysis Findings
+                            </h3>
+                            <div className="space-y-3 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
+                                {result.issues && result.issues.length > 0 ? (
+                                    result.issues.map((issue, i) => (
+                                        <div key={i} className="flex gap-3 p-3 rounded-lg bg-black/20 border border-white/5">
+                                             {issue.severity === 'high' || issue.severity === 'critical' ? (
+                                                <AlertTriangle className="w-4 h-4 text-cyber-red shrink-0 mt-0.5" />
+                                            ) : issue.severity === 'medium' ? (
+                                                <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+                                            ) : (
+                                                <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                                            )}
+                                            <div>
+                                                <p className="text-sm text-gray-200">{issue.message}</p>
+                                                <span className={cn("text-[10px] uppercase font-bold tracking-wider mt-1 block", 
+                                                    (issue.severity === 'high' || issue.severity === 'critical') ? "text-cyber-red" : 
+                                                    issue.severity === 'medium' ? "text-yellow-500" : "text-blue-400"
+                                                )}>
+                                                    {issue.severity} Priority
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-32 text-gray-500">
+                                        <CheckCircle className="w-8 h-8 text-cyber-green/50 mb-2" />
+                                        <p>No vulnerabilities detected.</p>
                                     </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center py-12 text-gray-500 flex flex-col items-center">
-                                <CheckCircle className="w-12 h-12 text-cyber-green mb-3 opacity-20" />
-                                <p>No security issues detected.</p>
-                                <p className="text-xs mt-1 opacity-50">Target appears clean.</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Collapsible JSON */}
+                    <div className="border border-gray-800 rounded-lg overflow-hidden bg-black/20">
+                        <button 
+                            onClick={() => setShowJson(!showJson)}
+                            className="w-full px-4 py-2 flex justify-between items-center hover:bg-white/5 transition-colors"
+                        >
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                <FileJson className="w-3 h-3" /> Raw Scan Data
+                            </span>
+                            {showJson ? <ChevronUp className="w-3 h-3 text-gray-600"/> : <ChevronDown className="w-3 h-3 text-gray-600"/>}
+                        </button>
+                        {showJson && (
+                            <div className="p-4 border-t border-gray-800 bg-black/50 overflow-x-auto max-h-60 custom-scrollbar">
+                                <pre className="font-mono text-xs text-gray-400">{JSON.stringify(result.details || result, null, 2)}</pre>
                             </div>
                         )}
                     </div>
+
                 </div>
+            )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="lg:col-span-4 space-y-6">
+            <div className="bg-gray-900/30 border border-gray-800 rounded-xl p-5">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <History className="w-4 h-4 text-cyber-green" /> Recent Scans
+                </h3>
+                <HistoryList refreshTrigger={refreshHistory} />
             </div>
 
-            {/* Raw JSON Viewer */}
-            <div className="border border-gray-800 rounded-lg overflow-hidden">
-                <div className="bg-gray-900 px-4 py-2 border-b border-gray-800 flex justify-between items-center">
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Raw Scan Data</span>
-                    <span className="text-[10px] text-gray-600 font-mono">JSON</span>
-                </div>
-                <div className="bg-black p-4 font-mono text-xs text-gray-400 overflow-x-auto max-h-60 custom-scrollbar">
-                    <pre>{JSON.stringify(result.details || result, null, 2)}</pre>
-                </div>
+            <div className="bg-gray-900/30 border border-gray-800 rounded-xl p-5">
+                 <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Guides</h3>
+                 <div className="space-y-2">
+                    <InfoCard title="Manifest Scanner">
+                        Paste a URL to an <code>agent.json</code> or raw JSON. Checks for insecure instructions, prompt injection, and auth gaps.
+                    </InfoCard>
+                    <InfoCard title="Endpoint Health">
+                        Paste an API URL. Verifies HTTPS, Security Headers, and basic connectivity.
+                    </InfoCard>
+                 </div>
             </div>
-          </div>
-        )}
+        </div>
+
       </div>
     </div>
   )

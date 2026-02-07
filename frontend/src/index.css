@@ -1,28 +1,49 @@
-@import "tailwindcss";
-@theme {
-  --color-cyber-black: #0a0a0a;
-  --color-cyber-gray: #1a1a1a;
-  --color-cyber-green: #00ff41;
-  --color-cyber-green-dim: rgba(0, 255, 65, 0.1);
-  --color-cyber-red: #ff003c;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-cyber-black text-gray-300 font-mono;
+    @apply bg-cyber-black text-gray-300 font-sans antialiased;
   }
 }
 
+.font-sans {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
 .cyber-border {
-  @apply border border-gray-800 hover:border-cyber-green transition-colors duration-300;
+  @apply border border-gray-800 hover:border-gray-600 transition-colors duration-300;
 }
 
 .cyber-input {
-  @apply bg-cyber-gray border border-gray-700 text-white px-4 py-2 w-full focus:outline-none focus:border-cyber-green transition-all rounded-sm;
+  @apply bg-cyber-gray border border-gray-700 text-white px-4 py-3 w-full focus:outline-none focus:border-cyber-green focus:ring-1 focus:ring-cyber-green/50 transition-all rounded-md shadow-sm;
 }
 
 .cyber-button {
-  @apply bg-cyber-green text-black font-bold px-6 py-2 hover:bg-white transition-colors duration-200 uppercase tracking-wider rounded-sm;
+  @apply bg-cyber-green text-black font-bold px-6 py-3 hover:bg-white transition-all duration-200 uppercase tracking-wide rounded-md shadow-lg hover:shadow-cyber-green/20 text-sm;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
