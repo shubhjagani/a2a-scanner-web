@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cyber-black text-gray-300 font-mono;
+  }
+}
+
+.cyber-border {
+  @apply border border-gray-800 hover:border-cyber-green transition-colors duration-300;
+}
+
+.cyber-input {
+  @apply bg-cyber-gray border border-gray-700 text-white px-4 py-2 w-full focus:outline-none focus:border-cyber-green transition-all rounded-sm;
+}
+
+.cyber-button {
+  @apply bg-cyber-green text-black font-bold px-6 py-2 hover:bg-white transition-colors duration-200 uppercase tracking-wider rounded-sm;
+}
