@@ -4,9 +4,11 @@
 @theme {
   --color-cyber-black: #0a0a0a;
   --color-cyber-gray: #1a1a1a;
-  --color-cyber-green: #00ff41;
-  --color-cyber-green-dim: rgba(0, 255, 65, 0.1);
+  --color-cyber-green: #49C2C1;
+  --color-cyber-green-dim: rgba(73, 194, 193, 0.1);
   --color-cyber-red: #ff003c;
+  --color-gen-blue: #0400F5;
+  --color-charcoal: #242E39;
   
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;

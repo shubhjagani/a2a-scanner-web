@@ -40,13 +40,11 @@ const HistoryList = ({ refreshTrigger }) => {
 
     const fetchHistory = async () => {
         try {
-            // Check if backend history endpoint is available
-            const res = await fetch('http://localhost:8000/api/history').catch(() => null)
+            const res = await fetch('/api/history').catch(() => null)
             if (res && res.ok) {
                 const data = await res.json()
                 setHistory(data)
             } else {
-                // Mock history if backend unavailable
                 setHistory([
                     { id: 1, target: 'https://evil-agent.com/card.json', score: 25, status: 'CRITICAL', timestamp: new Date().toISOString() },
                     { id: 2, target: 'https://good-agent.ai/v1', score: 98, status: 'SAFE', timestamp: new Date(Date.now() - 3600000).toISOString() }
@@ -123,7 +121,7 @@ export default function App() {
     }
 
     try {
-        const res = await fetch(`http://localhost:8000${endpoint}`, {
+        const res = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -133,11 +131,10 @@ export default function App() {
         
         const data = await res.json()
         setResult(data)
-        setRefreshHistory(prev => prev + 1) // Trigger history refresh
+        setRefreshHistory(prev => prev + 1)
     } catch (err) {
         console.error(err)
         setError("Backend unreachable. Showing demo data.")
-        // Mock fallback
         setTimeout(() => {
              setResult({
               score: activeTab === 'card' ? 25 : 85,
@@ -163,8 +160,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-cyber-black text-gray-300 font-sans selection:bg-cyber-green selection:text-black">
-      {/* Background */}
+    <div className="min-h-screen bg-cyber-black text-gray-300 font-sans selection:bg-cyber-green/30 selection:text-white">
+      {/* Background grid */}
       <div className="fixed inset-0 bg-[linear-gradient(rgba(20,20,20,0.8)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.8)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)] z-0 pointer-events-none opacity-20"></div>
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-12 relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -172,9 +169,15 @@ export default function App() {
         {/* Main Content */}
         <div className="lg:col-span-8">
             <header className="mb-10">
+                {/* Gen Logo */}
+                <div className="mb-6">
+                  <svg width="80" height="24" viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <text x="0" y="20" fill="#49C2C1" fontSize="20" fontWeight="bold" fontFamily="Inter, sans-serif">Gen</text>
+                  </svg>
+                </div>
                 <div className="inline-flex items-center gap-3 mb-4 px-3 py-1 rounded-full bg-cyber-green/10 border border-cyber-green/20">
                     <Shield className="w-4 h-4 text-cyber-green" />
-                    <span className="text-cyber-green font-bold tracking-widest text-xs">A2A SECURE</span>
+                    <span className="text-cyber-green font-bold tracking-widest text-xs">AGENT TRUST HUB</span>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">
                     Agent Security Scanner
@@ -188,7 +191,6 @@ export default function App() {
             {/* Input Section */}
             <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6 shadow-2xl mb-8">
                 
-                {/* Tabs */}
                 <div className="flex gap-6 mb-6 border-b border-gray-800 pb-1">
                     <button 
                         onClick={() => { setActiveTab('card'); setInput(''); setResult(null); }}
@@ -245,15 +247,12 @@ export default function App() {
                 )}
             </div>
 
-            {/* Results Section */}
+            {/* Results */}
             {result && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                    
-                    {/* Score Header */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 flex items-center justify-between md:flex-col md:text-center md:justify-center relative overflow-hidden group">
                              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                             
                              <div className="relative z-10">
                                 <span className="text-gray-500 text-xs font-bold uppercase tracking-wider block mb-2">Trust Score</span>
                                 <span className={cn("text-6xl font-bold tracking-tighter", 
@@ -262,7 +261,6 @@ export default function App() {
                                     {result.score}
                                 </span>
                              </div>
-
                              <div className="relative z-10 md:mt-4">
                                 <span className={cn("px-3 py-1 rounded text-xs font-bold uppercase tracking-widest border", 
                                     result.score > 80 ? "bg-green-500/10 border-green-500/20 text-green-400" : 
@@ -311,7 +309,6 @@ export default function App() {
                         </div>
                     </div>
 
-                    {/* Collapsible JSON */}
                     <div className="border border-gray-800 rounded-lg overflow-hidden bg-black/20">
                         <button 
                             onClick={() => setShowJson(!showJson)}
@@ -328,7 +325,6 @@ export default function App() {
                             </div>
                         )}
                     </div>
-
                 </div>
             )}
         </div>
@@ -356,6 +352,11 @@ export default function App() {
         </div>
 
       </div>
+      
+      {/* Footer */}
+      <footer className="text-center py-6 text-xs text-gray-600 border-t border-gray-800/50">
+        © {new Date().getFullYear()} Gen Digital Inc. All rights reserved.
+      </footer>
     </div>
   )
 }
